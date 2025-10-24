@@ -1,8 +1,15 @@
-# funny_error.py
+import random
 from flask import Flask, jsonify, request, render_template_string
 from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
+
+# ---------- Словарь ----------
+dad_jokes_rus = [
+    "Сотрудник хлебзавода скинул коллегу в миксер. Расследование показало, что замешан директор предприятия!",
+    "— Куда мышь спрятала сыр? — Не знаю, молчит как пармезан!",
+    "— Что общего у кандидата наук и лошади, идущей по улице. — Они теоретически подкованы.",
+]
 
 # ---------- Универсальная функция вывода ошибки ----------
 def funny_error_page(code, title, message, tip, ascii_art):
@@ -30,7 +37,6 @@ def funny_error_page(code, title, message, tip, ascii_art):
         """
         return render_template_string(html), code
 
-
 # ---------- 430 ----------
 class TooManyDadJokes(HTTPException):
     code = 430
@@ -38,10 +44,12 @@ class TooManyDadJokes(HTTPException):
 
 @app.errorhandler(TooManyDadJokes)
 def handle_too_many_dad_jokes(error):
+    # Выбираем случайную шутку
+    joke = random.choice(dad_jokes_rus)
     return funny_error_page(
         430,
         "Too Many Dad Jokes",
-        "Слишком много папиных шуток. Перезарядите чувство юмора и попробуйте снова.",
+        f"Слишком много папиных шуток. Перезарядите чувство юмора и попробуйте снова.\n\nВот пример шутки: {joke}",
         "Совет: попробуйте отправить шутку без слова 'папа'.",
         "  (╯°□°）╯︵ ┻━┻\n  (┛◉Д◉)┛彡┻━┻  — шутки снесли стол",
     )
@@ -49,11 +57,12 @@ def handle_too_many_dad_jokes(error):
 @app.route("/tell-a-dad-joke", methods=["POST"])
 def tell_a_dad_joke():
     data = request.get_json(silent=True) or {}
-    joke = data.get("joke", "")
-    if "папа" in joke.lower() or len(joke) > 140:
+    joke_sent = data.get("joke", "")
+    if "папа" in joke_sent.lower() or len(joke_sent) > 140:
         raise TooManyDadJokes()
-    return jsonify({"ok": True, "you_sent": joke})
-
+    # Если шутка нормальная — отвечаем OK и случайной шуткой
+    joke = random.choice(dad_jokes_rus)
+    return jsonify({"ok": True, "your_joke": joke_sent, "dad_joke": joke})
 
 # ---------- 472 ----------
 class CatInterruption(HTTPException):
@@ -74,7 +83,6 @@ def handle_cat_interruption(error):
 def cat_interruption():
     raise CatInterruption()
 
-
 # ---------- 469 ----------
 class OverlySarcasticRequest(HTTPException):
     code = 469
@@ -94,14 +102,13 @@ def handle_overly_sarcastic_request(error):
 def sarcasm():
     raise OverlySarcasticRequest()
 
-
 # ---------- Домашняя страница ----------
 @app.route("/")
 def index():
     return """
     <h2>Ошибки сервера</h2>
     <ul>
-        <li>POST /tell-a-dad-joke — вызывает <b>430 Too Many Dad Jokes</b></li>
+        <li>POST /tell-a-dad-joke — вызывает <b>430 Too Many Dad Jokes</b> с рандомной шуткой</li>
         <li>GET /cat — вызывает <b>472 Cat Interruption</b></li>
         <li>GET /sarcasm — вызывает <b>469 Overly Sarcastic Request</b></li>
     </ul>
